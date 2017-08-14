@@ -1,0 +1,26 @@
+{
+  "name": "jest-dashboard",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "prettier": "prettier --single-quote --trailing-comma all --write \"./index.js\"",
+    "test": "jest"
+  },
+  "jest": {
+    "reporters": [
+      "./index.js"
+    ]
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "cross-spawn": "^5.1.0",
+    "jest": "^20.0.4",
+    "prettier": "^1.5.3"
+  },
+  "dependencies": {
+    "blessed": "^0.1.81"
+  }
+}
