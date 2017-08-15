@@ -1,8 +1,14 @@
 const blessed = require('blessed');
+const {
+  centerText,
+  colorizeLog,
+  buildErrorText,
+  parseTestResults,
+} = require('./src/utils');
+const { buildBox, scroll } = require('./src/boxes');
 
 module.exports = class JestDashboard {
   constructor() {
-    this.color = '#a23c4f';
     this.runTime = 0;
     this.passingTests = [];
     this.failingTests = [];
@@ -34,7 +40,7 @@ module.exports = class JestDashboard {
     this.screen.render();
   }
 
-  onTestResult(test, testResult) {
+  onTestResult(_test, testResult) {
     if (testResult.testExecError) {
       return this.handleExecError(testResult);
     }
@@ -42,7 +48,9 @@ module.exports = class JestDashboard {
     this.buildLog(testResult.console);
     this.buildResults(testResult.testResults);
 
-    this.testTimeBox.setContent(this.centerText(this.runTime > 0 ? `${this.runTime}s` : '<1s'));
+    this.testTimeBox.setContent(
+      centerText(this.runTime > 0 ? `${this.runTime}s` : '<1s'),
+    );
 
     this.screen.render();
   }
@@ -50,7 +58,7 @@ module.exports = class JestDashboard {
   handleExecError({ failureMessage, testExecError: { loc }, testFilePath }) {
     this.errors = [
       ...this.errors,
-      this.buildErrorText(testFilePath, loc, failureMessage),
+      buildErrorText(testFilePath, loc, failureMessage),
     ];
     this.errorBox.setContent(this.errors.join('\n'));
     this.screen.render();
@@ -62,36 +70,21 @@ module.exports = class JestDashboard {
       ...log.map(({ message, origin }) => `${origin}:\n\t${message}`),
     ];
 
-    this.logBox.setContent(this.log.join('\n'));
+    log.forEach(({ message, origin, type }) =>
+      this.logElement.log(colorizeLog(`${origin}:\n\t${message}\n\n`, type)),
+    );
   }
 
   buildResults(testResults) {
-    const { errors, failing, passing } = testResults.reduce(
-      (acc, result) =>
-        result.failureMessages.length > 0
-          ? Object.assign({}, acc, {
-              failing: [...acc.failing, result.fullName],
-              errors: [
-                ...acc.errors,
-                ...result.failureMessages.map(message => ({
-                  message,
-                  fullName: result.fullName,
-                })),
-              ],
-            })
-          : Object.assign({}, acc, {
-              passing: [...acc.passing, result.fullName],
-            }),
-      { errors: [], failing: [], passing: [] },
-    );
+    const { errors, failing, passing } = parseTestResults(testResults);
 
     this.passingTests = [...this.passingTests, ...passing];
     this.failingTests = [...this.failingTests, ...failing];
 
     this.passingBox.setContent(this.passingTests.join('\n'));
-    this.passedBox.setContent(this.centerText(this.passingTests.length.toString()));
+    this.passedBox.setContent(centerText(this.passingTests.length.toString()));
     this.failingBox.setContent(this.failingTests.join('\n'));
-    this.failedBox.setContent(this.centerText(this.failingTests.length.toString()));
+    this.failedBox.setContent(centerText(this.failingTests.length.toString()));
 
     this.buildTestErrors(errors);
   }
@@ -100,16 +93,18 @@ module.exports = class JestDashboard {
     this.errors = [...this.errors, ...errors];
     this.errorBox.setContent(
       this.errors
-        .map(({ fullName, message }) => `${fullName}\n${message}`)
+        .map(({ title, message }) => `${title}\n${message}`)
         .join('\n'),
     );
   }
 
   onRunStart(results, options) {
-    this.statusBox.setContent(this.centerText('Running'));
+    this.statusBox.setContent(centerText('Running'));
     this.interval = setInterval(() => {
       this.runTime = this.runTime + 1;
-      this.testTimeBox.setContent(this.centerText(this.runTime > 0 ? `${this.runTime}s` : '<1s'));
+      this.testTimeBox.setContent(
+        centerText(this.runTime > 0 ? `${this.runTime}s` : '<1s'),
+      );
       this.screen.render();
     }, 1000);
   }
@@ -118,129 +113,105 @@ module.exports = class JestDashboard {
     clearInterval(this.interval);
     this.interval = null;
     this.runTime = 0;
-    this.statusBox.setContent(this.centerText('Complete'));
+    this.statusBox.setContent(centerText('Complete'));
     this.screen.render();
   }
 
-  buildErrorText(filePath, loc, failureMessage) {
-    return `${filePath}\n${loc.line}:${loc.column}\n${failureMessage}`;
-  }
-
-  centerText(text) {
-    return `{center}${text}{/center}`;
-  }
-
   layoutPassingTests() {
-    this.passingBox = blessed.box({
+    this.passingBox = buildBox({
       label: 'Passing',
-      padding: 1,
       left: '0%',
       top: '0%',
       height: '100%',
       width: '25%',
-      border: { type: 'line' },
-      style: { border: { fg: this.color } },
-    });
+    }, true);
     this.screen.append(this.passingBox);
   }
 
   layoutFailingTests() {
-    this.failingBox = blessed.box({
+    this.failingBox = buildBox({
       label: 'Failing',
-      padding: 1,
       left: '25%',
       top: '0%',
       height: '100%',
       width: '25%',
-      border: { type: 'line' },
-      style: { border: { fg: this.color } },
-    });
+    }, true);
     this.screen.append(this.failingBox);
   }
 
   layoutErrorLog() {
-    this.errorBox = blessed.box({
+    this.errorBox = buildBox({
       label: 'Errors',
-      padding: 1,
       left: '50%',
-      top: '36%',
-      height: '66%',
-      border: { type: 'line' },
-      style: { border: { fg: this.color } },
-    });
+      top: '39%',
+      height: '62.5%',
+    }, true);
     this.screen.append(this.errorBox);
   }
 
   layoutTotalTestTime() {
-    this.testTimeBox = blessed.box({
+    this.testTimeBox = buildBox({
       label: 'Total Test Time',
-      padding: 1,
       left: '50%',
       top: '0%',
       height: '10%',
+      scrollable: false,
       width: '12.5%',
-      border: { type: 'line' },
-      style: { border: { fg: this.color } },
       tags: true,
     });
     this.screen.append(this.testTimeBox);
   }
 
   layoutStatus() {
-    this.statusBox = blessed.box({
+    this.statusBox = buildBox({
       label: 'Status',
-      padding: 1,
       left: '62.5%',
       top: '0%',
       height: '10%',
+      scrollable: false,
       width: '12.5%',
-      border: { type: 'line' },
-      style: { fg: -1, border: { fg: this.color } },
       tags: true,
     });
     this.screen.append(this.statusBox);
   }
 
   layoutPassed() {
-    this.passedBox = blessed.box({
+    this.passedBox = buildBox({
       label: 'Passed',
-      padding: 1,
       left: '75%',
       top: '0%',
       height: '10%',
+      scrollable: false,
       width: '12.5%',
-      border: { type: 'line' },
-      style: { border: { fg: this.color } },
       tags: true,
     });
+    this.passedBox.setContent('0');
     this.screen.append(this.passedBox);
   }
 
   layoutFailed() {
-    this.failedBox = blessed.box({
+    this.failedBox = buildBox({
       label: 'Failed',
-      padding: 1,
       left: '87.5%',
       top: '0%',
       height: '10%',
+      scrollable: false,
       width: '12.5%',
-      border: { type: 'line' },
-      style: { border: { fg: this.color } },
       tags: true,
     });
+    this.failedBox.setContent('0');
     this.screen.append(this.failedBox);
   }
 
   layoutLog() {
-    this.logBox = blessed.box({
+    this.logBox = buildBox({
       label: 'Log',
-      padding: 1,
       left: '50%',
       top: '10%',
-      height: '26%',
-      border: { type: 'line' },
-      style: { border: { fg: this.color } },
+      height: '30%',
     });
+
+    this.logElement = scroll({ parent: this.logBox });
 
     this.screen.append(this.logBox);
   }
