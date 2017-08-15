@@ -3,7 +3,7 @@ describe('lol', () => {
     console.log('testadoo')
     expect(1).toBe(1);
   })
-  it('failes', () => {
+  it('fails', () => {
     expect(1).toBe(2);
   })
 })
