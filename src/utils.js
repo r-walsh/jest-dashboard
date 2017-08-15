@@ -3,8 +3,10 @@ const { inspect } = require('util');
 const buildErrorText = (filePath, loc, failureMessage) =>
   `${filePath}\n${loc.line}:${loc.column}\n${failureMessage}`;
 
-const buildTitleText = (title, ancestorName) =>
-  ancestorName ? `${ancestorName} ${title}` : title;
+const buildTitleText = (title, ancestorName, withBullets) =>
+  ancestorName
+    ? `${withBullets ? '\u2022 ' : ''}${ancestorName} ${title}`
+    : `\u2022 ${title}`;
 
 const centerText = text => `{center}${text}{/center}`;
 
@@ -26,30 +28,24 @@ const colorizeLog = (message, type) => {
 
 const parseTestResults = testResults =>
   testResults.reduce(
-    (acc, result) =>
-      result.failureMessages.length > 0
+    (acc, result) => {
+      const lastTitle = result.ancestorTitles[result.ancestorTitles.length - 1];
+      const titleText = buildTitleText(result.title, lastTitle);
+      return result.failureMessages.length > 0
         ? Object.assign({}, acc, {
-            failing: [...acc.failing, result.fullName],
+            failing: [...acc.failing, titleText],
             errors: [
               ...acc.errors,
               ...result.failureMessages.map(message => ({
                 message,
-                title: buildTitleText(
-                  result.title,
-                  result.ancestorTitles[result.ancestorTitles.length - 1],
-                ),
+                title: titleText,
               })),
             ],
           })
         : Object.assign({}, acc, {
-            passing: [
-              ...acc.passing,
-              buildTitleText(
-                result.title,
-                result.ancestorTitles[result.ancestorTitles.length - 1],
-              ),
-            ],
-          }),
+            passing: [...acc.passing, titleText],
+          });
+    },
     { errors: [], failing: [], passing: [] },
   );
 

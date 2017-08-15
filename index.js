@@ -118,34 +118,43 @@ module.exports = class JestDashboard {
   }
 
   layoutPassingTests() {
-    this.passingBox = buildBox({
-      label: 'Passing',
-      left: '0%',
-      top: '0%',
-      height: '100%',
-      width: '25%',
-    }, true);
+    this.passingBox = buildBox(
+      {
+        label: 'Passing',
+        left: '0%',
+        top: '0%',
+        height: '100%',
+        width: '25%',
+      },
+      true,
+    );
     this.screen.append(this.passingBox);
   }
 
   layoutFailingTests() {
-    this.failingBox = buildBox({
-      label: 'Failing',
-      left: '25%',
-      top: '0%',
-      height: '100%',
-      width: '25%',
-    }, true);
+    this.failingBox = buildBox(
+      {
+        label: 'Failing',
+        left: '25%',
+        top: '0%',
+        height: '100%',
+        width: '25%',
+      },
+      true,
+    );
     this.screen.append(this.failingBox);
   }
 
   layoutErrorLog() {
-    this.errorBox = buildBox({
-      label: 'Errors',
-      left: '50%',
-      top: '39%',
-      height: '62.5%',
-    }, true);
+    this.errorBox = buildBox(
+      {
+        label: 'Errors',
+        left: '50%',
+        top: '39%',
+        height: '62.5%',
+      },
+      true,
+    );
     this.screen.append(this.errorBox);
   }
 
