@@ -26,6 +26,17 @@ const colorizeLog = (message, type) => {
   }
 };
 
+const hookStdout = callback => {
+  const oldWrite = process.stdout.write;
+
+  process.stdout.write = (write => (...args) => {
+    write.apply(process.stdout, args);
+    callback(...args);
+  })(process.stdout.write);
+
+  return () => (process.stdout.write = oldWrite);
+};
+
 const parseTestResults = testResults =>
   testResults.reduce(
     (acc, result) => {
@@ -49,4 +60,4 @@ const parseTestResults = testResults =>
     { errors: [], failing: [], passing: [] },
   );
 
-module.exports = { buildErrorText, centerText, colorizeLog, parseTestResults };
+module.exports = { buildErrorText, centerText, colorizeLog, hookStdout, parseTestResults };

@@ -3,6 +3,7 @@ const {
   centerText,
   colorizeLog,
   buildErrorText,
+  hookStdout,
   parseTestResults,
 } = require('./src/utils');
 const { buildBox, scroll } = require('./src/boxes');
@@ -37,7 +38,15 @@ module.exports = class JestDashboard {
       process.exit(0);
     });
 
+    this.screen.key(['a', 'p', 't', 'q', 'w', 'enter'], () => process.stdin.resume());
+
+    // hookStdout((text) => this.logElement.log(text.toString()))
+
     this.screen.render();
+  }
+
+  handleJestLog(text) {
+    this.logElement.log(text);
   }
 
   onTestResult(_test, testResult) {
@@ -98,7 +107,8 @@ module.exports = class JestDashboard {
     );
   }
 
-  onRunStart(results, options) {
+  onRunStart(results, options, ...rest) {
+    // console.log(results, options, rest)
     this.statusBox.setContent(centerText('Running'));
     this.interval = setInterval(() => {
       this.runTime = this.runTime + 1;
@@ -107,6 +117,19 @@ module.exports = class JestDashboard {
       );
       this.screen.render();
     }, 1000);
+    if (results.numTotalTestSuites === 0) {
+      this.logElement.log(`
+No tests found related to files changed since last commit.
+Press \`a\` to run all tests, or run Jest with \`--watchAll\`.
+
+Watch Usage
+ › Press a to run all tests.
+ › Press p to filter by a filename regex pattern.
+ › Press t to filter by a test name regex pattern.
+ › Press q to quit watch mode.
+ › Press Enter to trigger a test run.`.trim()
+      )
+    }
   }
 
   onRunComplete(contexts, results) {
