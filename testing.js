@@ -1,11 +1,21 @@
-#!/usr/bin/env node
+const reporter = require('./');
 
-const spawn = require('cross-spawn');
-const stream = require('stream');
+module.exports = class Reporter {
+  constructor(globalConfig) {
+    reporter.onJestStart(globalConfig);
+    this.watching = globalConfig.watch;
+  }
 
-const customStream = new stream.Writable();
-customStream._write = data => console.log(data.toString());
+  onTestResult(_test, testResult) {
+    reporter.onTestResult(_test, testResult);
+  }
 
-const foo = spawn(`npx`, ['jest', '--reporters=./index.js'], (err, stdout, stderr) => );
+  onRunStart(results) {
+    reporter.onRunStart(results);
+  }
 
-foo.stdout.pipe(customStream);
+  onRunComplete(contexts, results) {
+    reporter.onRunComplete(contexts, results);
+  }
+};
+

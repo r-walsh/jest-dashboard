@@ -3,18 +3,17 @@ const {
   centerText,
   colorizeLog,
   buildErrorText,
-  hookStdout,
   parseTestResults,
 } = require('./src/utils');
 const { buildBox, scroll } = require('./src/boxes');
 
-module.exports = class JestDashboard {
-  constructor() {
+class JestDashboard {
+  onJestStart(globalConfig) {
+    this.watching = globalConfig.watch;
     this.runTime = 0;
     this.passingTests = [];
     this.failingTests = [];
     this.errors = [];
-    this.log = [];
     this.interval = null;
 
     this.screen = blessed.screen({
@@ -38,9 +37,9 @@ module.exports = class JestDashboard {
       process.exit(0);
     });
 
-    this.screen.key(['a', 'p', 't', 'q', 'w', 'enter'], () => process.stdin.resume());
-
-    // hookStdout((text) => this.logElement.log(text.toString()))
+    this.screen.key(['a', 'p', 't', 'w', 'enter'], () =>
+      this.watching && process.stdin.resume(),
+    );
 
     this.screen.render();
   }
@@ -54,7 +53,7 @@ module.exports = class JestDashboard {
       return this.handleExecError(testResult);
     }
 
-    this.buildLog(testResult.console);
+    testResult.console && this.buildLog(testResult.console);
     this.buildResults(testResult.testResults);
 
     this.testTimeBox.setContent(
@@ -74,11 +73,6 @@ module.exports = class JestDashboard {
   }
 
   buildLog(log) {
-    this.log = [
-      ...this.log,
-      ...log.map(({ message, origin }) => `${origin}:\n\t${message}`),
-    ];
-
     log.forEach(({ message, origin, type }) =>
       this.logElement.log(colorizeLog(`${origin}:\n\t${message}\n\n`, type)),
     );
@@ -107,28 +101,30 @@ module.exports = class JestDashboard {
     );
   }
 
-  onRunStart(results, options, ...rest) {
-    // console.log(results, options, rest)
+  onRunStart(results) {
     this.statusBox.setContent(centerText('Running'));
+    this.runTime = '<1s';
+    this.testTimeBox.setContent(centerText(this.runTime));
     this.interval = setInterval(() => {
       this.runTime = this.runTime + 1;
-      this.testTimeBox.setContent(
-        centerText(this.runTime > 0 ? `${this.runTime}s` : '<1s'),
-      );
+      this.testTimeBox.setContent(centerText(`${this.runTime}s`));
       this.screen.render();
     }, 1000);
-    if (results.numTotalTestSuites === 0) {
-      this.logElement.log(`
-No tests found related to files changed since last commit.
-Press \`a\` to run all tests, or run Jest with \`--watchAll\`.
 
+    if (this.watching) {
+      this.logElement.log(
+        `
+${results.numTotalTestSuites === 0
+          ? `No tests found related to files changed since last commit.
+Press \`a\` to run all tests, or run Jest with \`--watchAll\`.\n`
+          : ''}
 Watch Usage
  › Press a to run all tests.
  › Press p to filter by a filename regex pattern.
  › Press t to filter by a test name regex pattern.
  › Press q to quit watch mode.
- › Press Enter to trigger a test run.`.trim()
-      )
+ › Press Enter to trigger a test run.`.trim(),
+      );
     }
   }
 
@@ -173,8 +169,8 @@ Watch Usage
       {
         label: 'Errors',
         left: '50%',
-        top: '39%',
-        height: '62.5%',
+        top: '40%',
+        height: '61.5%',
       },
       true,
     );
@@ -186,11 +182,12 @@ Watch Usage
       label: 'Total Test Time',
       left: '50%',
       top: '0%',
-      height: '10%',
+      height: '11%',
       scrollable: false,
       width: '12.5%',
       tags: true,
     });
+    this.testTimeBox.setContent(centerText('<1s'));
     this.screen.append(this.testTimeBox);
   }
 
@@ -199,7 +196,7 @@ Watch Usage
       label: 'Status',
       left: '62.5%',
       top: '0%',
-      height: '10%',
+      height: '11%',
       scrollable: false,
       width: '12.5%',
       tags: true,
@@ -212,12 +209,12 @@ Watch Usage
       label: 'Passed',
       left: '75%',
       top: '0%',
-      height: '10%',
+      height: '11%',
       scrollable: false,
       width: '12.5%',
       tags: true,
     });
-    this.passedBox.setContent('0');
+    this.passedBox.setContent(centerText('0'));
     this.screen.append(this.passedBox);
   }
 
@@ -226,12 +223,12 @@ Watch Usage
       label: 'Failed',
       left: '87.5%',
       top: '0%',
-      height: '10%',
+      height: '11%',
       scrollable: false,
       width: '12.5%',
       tags: true,
     });
-    this.failedBox.setContent('0');
+    this.failedBox.setContent(centerText('0'));
     this.screen.append(this.failedBox);
   }
 
@@ -239,7 +236,7 @@ Watch Usage
     this.logBox = buildBox({
       label: 'Log',
       left: '50%',
-      top: '10%',
+      top: '11%',
       height: '30%',
     });
 
@@ -248,3 +245,5 @@ Watch Usage
     this.screen.append(this.logBox);
   }
 };
+
+module.exports = new JestDashboard();

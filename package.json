@@ -1,26 +1,31 @@
 {
   "name": "jest-dashboard",
-  "version": "1.0.0",
+  "version": "1.0.0-beta",
   "description": "",
   "main": "index.js",
   "scripts": {
     "prettier": "prettier --single-quote --trailing-comma all --write \"./index.js\" \"./src/**/*.js\"",
-    "test": "jest"
+    "test": "jest",
+    "test:watch": "npm run test -- --watch"
   },
   "jest": {
     "reporters": [
-      "./index.js"
+      "./testing.js"
     ]
   },
-  "keywords": [],
+  "keywords": [
+    "jest",
+    "dashboard"
+  ],
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "cross-spawn": "^5.1.0",
     "jest": "^20.0.4",
     "prettier": "^1.5.3"
   },
   "dependencies": {
-    "blessed": "^0.1.81"
+    "blessed": "^0.1.81",
+    "cross-spawn": "^5.1.0",
+    "jest-cli": "^20.0.4"
   }
 }

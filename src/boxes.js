@@ -5,6 +5,7 @@ const DEFAULT_OPTIONS = {
   scrollable: true,
   style: { border: { fg: '#a23c4f' } },
   padding: 1,
+  tags: true,
 };
 
 const DEFAULT_SCROLL_OPTIONS = {

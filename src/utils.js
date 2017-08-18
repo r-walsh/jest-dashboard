@@ -11,8 +11,8 @@ const buildTitleText = (title, ancestorName, withBullets) =>
 const centerText = text => `{center}${text}{/center}`;
 
 const colorize = (color, text) => {
-  const codes = inspect.colors[color];
-  return `\x1b[${codes[0]}m${text}\x1b[${codes[1]}m`;
+  const [codeOne, codeTwo] = inspect.colors[color];
+  return `\x1b[${codeOne}m${text}\x1b[${codeTwo}m`;
 };
 
 const colorizeLog = (message, type) => {
@@ -26,22 +26,11 @@ const colorizeLog = (message, type) => {
   }
 };
 
-const hookStdout = callback => {
-  const oldWrite = process.stdout.write;
-
-  process.stdout.write = (write => (...args) => {
-    write.apply(process.stdout, args);
-    callback(...args);
-  })(process.stdout.write);
-
-  return () => (process.stdout.write = oldWrite);
-};
-
 const parseTestResults = testResults =>
   testResults.reduce(
     (acc, result) => {
       const lastTitle = result.ancestorTitles[result.ancestorTitles.length - 1];
-      const titleText = buildTitleText(result.title, lastTitle);
+      const titleText = buildTitleText(result.title, lastTitle, true);
       return result.failureMessages.length > 0
         ? Object.assign({}, acc, {
             failing: [...acc.failing, titleText],
@@ -49,7 +38,10 @@ const parseTestResults = testResults =>
               ...acc.errors,
               ...result.failureMessages.map(message => ({
                 message,
-                title: titleText,
+                title: `{bold}${colorize(
+                  'red',
+                  buildTitleText(result.title, lastTitle, false),
+                )}{/bold}`,
               })),
             ],
           })
@@ -60,4 +52,9 @@ const parseTestResults = testResults =>
     { errors: [], failing: [], passing: [] },
   );
 
-module.exports = { buildErrorText, centerText, colorizeLog, hookStdout, parseTestResults };
+module.exports = {
+  buildErrorText,
+  centerText,
+  colorizeLog,
+  parseTestResults,
+};
